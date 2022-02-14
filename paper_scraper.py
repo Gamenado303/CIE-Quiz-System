@@ -1,8 +1,11 @@
 import requests
 from pathlib import Path
-import PyPDF2
+from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 import os
 import tabula
+#import fitz
+from typing import Iterable, Any
+from pdfminer.high_level import extract_pages
 
 class PDFPaper(object):
     def __init__(self, category="", subject_code="", year="", season="", time_zone="", paper=""):
@@ -61,7 +64,7 @@ def scan_papers(pdf):
     paper_count = list(paper_count)
     return paper_count
 
-def multi_choice_ans_finder(pdf):
+def mc_ans_finder(pdf):
     if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
         print("Not enough info")
         return
@@ -117,18 +120,69 @@ def multi_choice_ans_finder(pdf):
 
     return answers
 
-def scrape_paper(self):
-    filename = Path('test.pdf')
-    url = self.link
+
+def mc_questions(pdf):
+    if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
+        print("Not enough info")
+        return
+
+    url = f"https://papers.gceguide.com/{pdf.category}/{pdf.subject}/{pdf.year}/{pdf.subject_code}_{pdf.season}{pdf.year[-2:]}_qp_{pdf.paper}{pdf.time_zone}.pdf"
+    filename = Path("test.pdf")
     response = requests.get(url)
     filename.write_bytes(response.content)
-    file = open('test.pdf', 'rb')
-    fileReader = PyPDF2.PdfFileReader(file)
-    for x in range(fileReader.numPages):
-        pageObj = fileReader.getPage(x)
-        print(pageObj.extractText())
-        print("-"*100)
-    file.close()
+    path = Path('test.pdf').expanduser()
+    pages = extract_pages(path)
+    qn = [str(i) for i in range(1, 100)]
+    qns = {}
+    page_num = 0
+    question_amount = 0
+    for page in pages:
+        qns[page_num] = {}
+        for textbox in page:
+            if textbox.__class__.__name__ == "LTTextBoxHorizontal":
+                coords = [int(i) for i in textbox.bbox]
+                text = ""
+                text = textbox.get_text().strip().split()
+                if text and coords[0] < 60:
+                    if text[0] in qn:
+                        qns[page_num][int(text[0])] = coords
+                        question_amount += 1
+        page_num += 1
+    
+    with open("test.pdf", "rb") as in_f:
+        input1 = PdfFileReader(in_f)
+        page_num = 1
+        
+        for i in range(1, question_amount+1):
+            while i not in qns[page_num]:
+                page_num += 1                
+            page = input1.getPage(page_num)
+            top_right = [595, qns[page_num][i][3]+2]
+            if i < question_amount and i+1 in qns[page_num]:
+                bot_left = [0, qns[page_num][i+1][3]]
+            else:
+                bot_left = [0, 0]
+            page.cropBox.lowerLeft = (bot_left[0], bot_left[1])
+            page.cropBox.upperRight = (top_right[0], top_right[1])
+            output = PdfFileWriter()
+            output.addPage(page)
+            with open(f"{i}.pdf", "ab") as out_f:
+                output.write(out_f)
+
+    pdfs = qn[:question_amount]
+    for i in range(0, len(pdfs)):
+        pdfs[i] = pdfs[i]+".pdf"
+    merger = PdfFileMerger()
+    for pdf in pdfs:
+        merger.append(pdf)
+
+    merger.write("result.pdf")
+    merger.close()
+    for i in pdfs:
+        os.remove(i)
+    print("Done")
+
+
 
 
 

@@ -4,19 +4,19 @@ def scrape_pdf_paper(category, subject_code, years, mark_scheme=False):
     years = [str(x) for x in years]
     answers = {"A":0, "B":0, "C":0, "D":0}
     for year in years:
-        past_paper = ps.PDFPaper(category = category, subject_code = subject_code, year = year)
-        past_paper.subject = ps.subject_finder(past_paper)
-        paper_count = ps.scan_papers(past_paper)
+        pp = ps.PDFPaper(category = category, subject_code = subject_code, year = year)
+        pp.subject = ps.subject_finder(pp)
+        paper_count = ps.scan_papers(pp)
         for version in paper_count:
-            past_paper.season = version[0]
-            past_paper.paper = version[1]
-            past_paper.time_zone = version[2]
-            if past_paper.paper == "1":
-                answer = ps.multi_choice_ans_finder(past_paper)
+            pp.season = version[0]
+            pp.paper = version[1]
+            pp.time_zone = version[2]
+            if pp.paper == "1" and pp.season == "w" and pp.time_zone == "3":
+                answer = ps.mc_ans_finder(pp)
                 for i in range(1,len(answer)):
                     answers[answer[i]] += 1
-                    
-    print(answers)
+                ps.mc_questions(pp)
+                
 
 if __name__ == '__main__':
     years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021]
