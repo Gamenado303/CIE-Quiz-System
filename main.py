@@ -2,7 +2,6 @@ import paper_scraper as ps
 
 def scrape_pdf_paper(category, subject_code, years, mark_scheme=False):
     years = [str(x) for x in years]
-    answers = {"A":0, "B":0, "C":0, "D":0}
     for year in years:
         pp = ps.PDFPaper(category = category, subject_code = subject_code, year = year)
         pp.subject = ps.subject_finder(pp)
@@ -12,10 +11,7 @@ def scrape_pdf_paper(category, subject_code, years, mark_scheme=False):
             pp.paper = version[1]
             pp.time_zone = version[2]
             if pp.paper == "1" and pp.season == "w" and pp.time_zone == "3":
-                answer = ps.mc_ans_finder(pp)
-                for i in range(1,len(answer)):
-                    answers[answer[i]] += 1
-                ps.mc_questions(pp)
+                print(ps.start_mc_paper(pp))
                 
 
 if __name__ == '__main__':

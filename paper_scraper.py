@@ -1,6 +1,8 @@
 import requests
 from pathlib import Path
+import PyPDF2
 from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
+from pdf2image import convert_from_path
 import os
 import tabula
 #import fitz
@@ -161,7 +163,7 @@ def mc_questions(pdf):
             if i < question_amount and i+1 in qns[page_num]:
                 bot_left = [0, qns[page_num][i+1][3]]
             else:
-                bot_left = [0, 0]
+                bot_left = [0, 50]
             page.cropBox.lowerLeft = (bot_left[0], bot_left[1])
             page.cropBox.upperRight = (top_right[0], top_right[1])
             output = PdfFileWriter()
@@ -173,17 +175,33 @@ def mc_questions(pdf):
     for i in range(0, len(pdfs)):
         pdfs[i] = pdfs[i]+".pdf"
     merger = PdfFileMerger()
-    for pdf in pdfs:
-        merger.append(pdf)
-
-    merger.write("result.pdf")
+    for i in pdfs:
+        merger.append(i)
+    name = f"{pdf.subject_code}_{pdf.season}{pdf.year[-2:]}_qp_{pdf.paper}{pdf.time_zone}.pdf"
+    merger.write(name)
     merger.close()
     for i in pdfs:
         os.remove(i)
-    print("Done")
+    os.remove("test.pdf")
+    return name
 
+def start_mc_paper(pdf):
+    if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
+        print("Not enough info")
+        return
 
+    answers = mc_ans_finder(pdf)
+    file_name = mc_questions(pdf)
+    user_ans = {}
+    for qn in range(1, len(answers)+1):
+        print(f"Question {qn}")
+        user_input = input("Answer: ")
+        user_ans[qn] = user_input
 
+    correct = 0
+    for qn in range(1, len(answers)+1):
+        if answers[qn] == user_ans[qn]:
+            correct += 1
 
-
-
+    
+    return correct
