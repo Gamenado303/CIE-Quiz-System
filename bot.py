@@ -22,23 +22,33 @@ class Session():
         self.pp.subject = ps.subject_finder(self.pp)
         self.paper_count = ps.scan_papers(self.pp)
         self.user_answers = ""
-        self.question_num = ""
+        self.question_num = 1
+        self.cancel = False
         
     async def get_choices(self):
         await self.get_seasons()
         await self.get_papers()
         await self.get_time_zone()
-        option = await self.display_options()
-        if option == False:
-            embed=discord.Embed(
-                title="CIEQPS MC",
-                description="Cancelled!",
-                color=discord.Color.blue())
-            await self.channel.send(embed=embed)
+        await self.display_options()
+        if self.cancel:
+            await self.cancel_paper()
             return
         else:
             await self.display_paper()
-            await self.compile_answers()
+            if self.cancel == False:
+                await self.compile_answers()
+
+    async def cancel_paper(self):
+        embed=discord.Embed(
+                title="CIEQPS MC",
+                description="Paper ended!",
+                color=discord.Color.blue())
+        await self.channel.send(embed=embed)
+        for i in range(1, 100):
+            if os.path.isfile(f"{i}.pdf"):
+                os.remove(f"{i}.pdf")
+            if os.path.isfile(f"{i}.png"):
+                os.remove(f"{i}.png")
         
     async def get_seasons(self):
         embed=discord.Embed(
@@ -121,10 +131,8 @@ class Session():
             option = str(reaction.emoji)
             return msg.author != user and reaction.message == msg and reaction.emoji in emojis
         await bot.wait_for('reaction_add', check=check)
-        if option == emojis[0]:
-            return True
-        else:
-            return False
+        if option == emojis[1]:
+            self.cancel = True
 
     async def display_paper(self):
         answers = {}
@@ -142,7 +150,7 @@ class Session():
             pages = convert_from_path(f'{i}.pdf', 500, poppler_path = r'poppler-0.68.0\bin')
             pages[0].save(f'{i}.png', 'PNG')
             msg = await self.channel.send(file=discord.File(f'{i}.png'))
-            emojis = ["🇦", "🇧", "🇨", "🇩"]
+            emojis = ["🇦", "🇧", "🇨", "🇩", "⏩", "❌"]
             answer = {"🇦":"A","🇧":"B","🇨":"C","🇩":"D"} 
             for x in emojis:
                 await msg.add_reaction(x)
@@ -151,8 +159,16 @@ class Session():
                 option = str(reaction.emoji)
                 return msg.author != user and reaction.message == msg and reaction.emoji in emojis
             await bot.wait_for('reaction_add', check=check)
-            answers[i] = answer[option]
-        self.user_answers = answers
+            if option == "❌":
+                self.cancel = True
+                await self.cancel_paper()
+                break
+            elif option == "⏩":
+                answers[i] = ""
+            else:
+                answers[i] = answer[option]
+        if self.cancel != True:            
+            self.user_answers = answers
         
     async def compile_answers(self):
         embed=discord.Embed(
@@ -173,7 +189,7 @@ class Session():
             description=f"You got {correct} right!",
             color=discord.Color.blue())
         await self.channel.send(embed=embed)
-        if len(wrong > 0):
+        if len(wrong) > 0:
             embed=discord.Embed(
                 title="CIEQPS",
                 description=f"Questions you got wrong:",
@@ -189,22 +205,15 @@ class Session():
                     await msg.add_reaction("🇨")
                 elif i[1] == "D":
                     await msg.add_reaction("🇩")
-        for i in range(1, self.question_num+1):
-            if os.path.isfile(f'{i}.png'):
-                os.remove(f'{i}.png')
-            if os.path.isfile(f'{i}.pdf'):
-                os.remove(f'{i}.pdf')
+        await self.cancel_paper()
         
-            
-            
 @bot.command()
 async def help(ctx):
     embed=discord.Embed(
         title="CIEQPS Help",
         description="CIEQPS is a bot... yea that's it",
         color=discord.Color.blue())
-    embed.add_field(name = chr(173), value = chr(173))
-    embed.add_field(name="startmc", value="Begin setting up a multiple-choice question", inline=False)
+    embed.add_field(name="startmc", value="Begin setting up a multiple-choice question. Requires the subject code and year", inline=False)
     await ctx.channel.send(embed=embed)
 
 @bot.command()
