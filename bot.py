@@ -3,7 +3,7 @@ from discord.utils import get
 from discord.ext import commands
 import paper_scraper as ps
 import time
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, convert_from_bytes
 import os
 
 bot = commands.Bot(command_prefix='$')
@@ -18,7 +18,12 @@ class Session():
         self.season = ""  # "summer", "winter"
         self.paper = ""
         self.time_zone = ""
-
+        self.pp = ps.PDFPaper(category = "A%20Levels", subject_code = self.subject_code, year = self.year)
+        self.pp.subject = ps.subject_finder(self.pp)
+        self.paper_count = ps.scan_papers(self.pp)
+        self.user_answers = ""
+        self.question_num = ""
+        
     async def get_choices(self):
         await self.get_seasons()
         await self.get_papers()
@@ -33,6 +38,7 @@ class Session():
             return
         else:
             await self.display_paper()
+            await self.compile_answers()
         
     async def get_seasons(self):
         embed=discord.Embed(
@@ -47,7 +53,6 @@ class Session():
             self.season = reaction.emoji
             return msg.author != user and reaction.message == msg and reaction.emoji in emojis
         await bot.wait_for('reaction_add', check=check)
-        
         if self.season == emojis[0]:
             self.season = "m"
         elif self.season == emojis[1]:
@@ -56,16 +61,10 @@ class Session():
             self.season = "w"
         
     async def get_papers(self):
-        pp = ps.PDFPaper(category = "A%20Levels", subject_code = self.subject_code, year = self.year)
-        pp.subject = ps.subject_finder(pp)
-        paper_count = ps.scan_papers(pp)
         papers = set()
-        for version in paper_count:
-            pp.season = version[0]
-            pp.paper = version[1]
-            pp.time_zone = version[2]
-            if pp.season == self.season:
-                papers.add(pp.paper)
+        for version in self.paper_count:
+            if version[0] == self.season:
+                papers.add(version[1])
         papers = list(papers)
         papers.sort()
         emojis = {"1":"1️⃣", "2":"2️⃣", "3":"3️⃣", "4":"4️⃣", "5":"5️⃣", "6":"6️⃣"}
@@ -76,7 +75,6 @@ class Session():
         msg = await self.channel.send(embed=embed)
         for x in range(len(papers)):
             papers[x] = emojis[str(x+1)]
-
         for x in papers:
             await msg.add_reaction(x)
         def check(reaction, user):
@@ -86,11 +84,8 @@ class Session():
         self.paper = str(papers.index(self.paper)+1)
         
     async def get_time_zone(self):
-        pp = ps.PDFPaper(category = "A%20Levels", subject_code = self.subject_code, year = self.year)
-        pp.subject = ps.subject_finder(pp)
-        paper_count = ps.scan_papers(pp)
         papers = set()
-        for version in paper_count:
+        for version in self.paper_count:
             if version[:2] == self.season+self.paper:
                 papers.add(version[2])
         papers = list(papers)
@@ -132,28 +127,76 @@ class Session():
             return False
 
     async def display_paper(self):
+        answers = {}
         embed=discord.Embed(
             title="CIEQPS",
             description="Creating paper...",
             color=discord.Color.blue())
         msg = await self.channel.send(embed=embed)
-        pp = ps.PDFPaper(category = "A%20Levels", subject_code = self.subject_code, year = self.year)
-        pp.subject = ps.subject_finder(pp)
-        pp.season = self.season
-        pp.time_zone = self.time_zone
-        pp.paper = self.paper
-        name = ps.mc_questions(pp)
-        time.sleep(10)
-        pages = convert_from_path(name, 50, poppler_path = r'poppler-22.01.0\Library\bin')
-        q = 1
-        for i in range(len(pages)):
-            pages[i].save(f'{q}.png', 'PNG')
-            q += 1
-        #os.remove(name)
-        for x in range(1,3):
-            await self.channel.send(file=discord.File(f'{x}.png'))
-            os.remove(f"{x}.png")
+        self.pp.season = self.season
+        self.pp.time_zone = self.time_zone
+        self.pp.paper = self.paper
+        self.question_num = ps.mc_questions(self.pp)
+        for i in range(1, 5):
+        #for i in range(1, self.question_num+1):
+            pages = convert_from_path(f'{i}.pdf', 500, poppler_path = r'poppler-0.68.0\bin')
+            pages[0].save(f'{i}.png', 'PNG')
+            msg = await self.channel.send(file=discord.File(f'{i}.png'))
+            emojis = ["🇦", "🇧", "🇨", "🇩"]
+            answer = {"🇦":"A","🇧":"B","🇨":"C","🇩":"D"} 
+            for x in emojis:
+                await msg.add_reaction(x)
+            def check(reaction, user):
+                global option
+                option = str(reaction.emoji)
+                return msg.author != user and reaction.message == msg and reaction.emoji in emojis
+            await bot.wait_for('reaction_add', check=check)
+            answers[i] = answer[option]
+        self.user_answers = answers
         
+    async def compile_answers(self):
+        embed=discord.Embed(
+            title="CIEQPS",
+            description="Marking paper...",
+            color=discord.Color.blue())
+        msg = await self.channel.send(embed=embed)
+        answers = ps.mc_ans_finder(self.pp)
+        correct = 0
+        wrong = []
+        for qn in range(1, len(self.user_answers)+1):
+            if answers[qn] == self.user_answers[qn]:
+                correct += 1
+            else:
+                wrong.append([qn, answers[qn]])
+        embed=discord.Embed(
+            title="CIEQPS",
+            description=f"You got {correct} right!",
+            color=discord.Color.blue())
+        await self.channel.send(embed=embed)
+        if len(wrong > 0):
+            embed=discord.Embed(
+                title="CIEQPS",
+                description=f"Questions you got wrong:",
+                color=discord.Color.blue())
+            await self.channel.send(embed=embed)
+            for i in wrong:
+                msg = await self.channel.send(file=discord.File(f'{i[0]}.png'))
+                if i[1] == "A":
+                    await msg.add_reaction("🇦")
+                elif i[1] == "B":
+                    await msg.add_reaction("🇧")
+                elif i[1] == "C":
+                    await msg.add_reaction("🇨")
+                elif i[1] == "D":
+                    await msg.add_reaction("🇩")
+        for i in range(1, self.question_num+1):
+            if os.path.isfile(f'{i}.png'):
+                os.remove(f'{i}.png')
+            if os.path.isfile(f'{i}.pdf'):
+                os.remove(f'{i}.pdf')
+        
+            
+            
 @bot.command()
 async def help(ctx):
     embed=discord.Embed(
@@ -162,20 +205,20 @@ async def help(ctx):
         color=discord.Color.blue())
     embed.add_field(name = chr(173), value = chr(173))
     embed.add_field(name="startmc", value="Begin setting up a multiple-choice question", inline=False)
-    embed.add_field(name="Option2", value="Description", inline=False)
-    embed.add_field(name="Option3", value="Description", inline=False)
-    embed.add_field(name="Option4", value="Description", inline=False)
-    embed.add_field(name="Option5", value="Description", inline=False)
     await ctx.channel.send(embed=embed)
 
 @bot.command()
 async def startmc(ctx, subject_code, year):
+    embed=discord.Embed(
+        title="CIEQPS",
+        description="Starting paper...",
+        color=discord.Color.blue())
+    await ctx.channel.send(embed=embed)
     newSesh = Session(ctx, subject_code, year)
     await newSesh.get_choices()
-    
-    
+
 @bot.event
 async def on_ready():
     print("wa hoo")
 
-bot.run("OTQzMzk1MjUwNDE4OTAxMDMz.YgybSw.bKA8VXl2UVOYAYBtv73cB9jVZyQ")
+bot.run("")

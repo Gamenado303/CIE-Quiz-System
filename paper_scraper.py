@@ -164,6 +164,8 @@ def mc_questions(pdf):
                 bot_left = [0, qns[page_num][i+1][3]]
             else:
                 bot_left = [0, 50]
+            page.mediaBox.lowerLeft = (bot_left[0], bot_left[1])
+            page.mediaBox.upperRight = (top_right[0], top_right[1])
             page.cropBox.lowerLeft = (bot_left[0], bot_left[1])
             page.cropBox.upperRight = (top_right[0], top_right[1])
             output = PdfFileWriter()
@@ -171,6 +173,7 @@ def mc_questions(pdf):
             with open(f"{i}.pdf", "ab") as out_f:
                 output.write(out_f)
 
+    '''
     pdfs = qn[:question_amount]
     for i in range(0, len(pdfs)):
         pdfs[i] = pdfs[i]+".pdf"
@@ -182,8 +185,10 @@ def mc_questions(pdf):
     merger.close()
     for i in pdfs:
         os.remove(i)
+    
+    '''
     os.remove("test.pdf")
-    return name
+    return question_amount
 
 def start_mc_paper(pdf):
     if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
