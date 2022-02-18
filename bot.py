@@ -10,11 +10,12 @@ bot = commands.Bot(command_prefix='$')
 bot.remove_command("help")
 
 class Session():
-    def __init__(self, ctx, subject_code, year):
+    def __init__(self, ctx, subject_code, year, ID):
         self.ctx = ctx
         self.channel = ctx.channel
         self.subject_code = subject_code
         self.year = year
+        self.ID = str(ID)
         self.season = ""  # "summer", "winter"
         self.paper = ""
         self.time_zone = ""
@@ -45,10 +46,10 @@ class Session():
                 color=discord.Color.blue())
         await self.channel.send(embed=embed)
         for i in range(1, 100):
-            if os.path.isfile(f"{i}.pdf"):
-                os.remove(f"{i}.pdf")
-            if os.path.isfile(f"{i}.png"):
-                os.remove(f"{i}.png")
+            if os.path.isfile(f"{self.ID}{i}.pdf"):
+                os.remove(f"{self.ID}{i}.pdf")
+            if os.path.isfile(f"{self.ID}{i}.png"):
+                os.remove(f"{self.ID}{i}.png")
         
     async def get_seasons(self):
         embed=discord.Embed(
@@ -144,12 +145,12 @@ class Session():
         self.pp.season = self.season
         self.pp.time_zone = self.time_zone
         self.pp.paper = self.paper
-        self.question_num = ps.mc_questions(self.pp)
+        self.question_num = ps.mc_questions(self.pp, self.ID)
         for i in range(1, 5):
         #for i in range(1, self.question_num+1):
-            pages = convert_from_path(f'{i}.pdf', 500, poppler_path = r'poppler-0.68.0\bin')
-            pages[0].save(f'{i}.png', 'PNG')
-            msg = await self.channel.send(file=discord.File(f'{i}.png'))
+            pages = convert_from_path(f'{self.ID}{i}.pdf', 500, poppler_path = r'poppler-0.68.0\bin')
+            pages[0].save(f'{self.ID}{i}.png', 'PNG')
+            msg = await self.channel.send(file=discord.File(f'{self.ID}{i}.png'))
             emojis = ["🇦", "🇧", "🇨", "🇩", "⏩", "❌"]
             answer = {"🇦":"A","🇧":"B","🇨":"C","🇩":"D"} 
             for x in emojis:
@@ -196,7 +197,7 @@ class Session():
                 color=discord.Color.blue())
             await self.channel.send(embed=embed)
             for i in wrong:
-                msg = await self.channel.send(file=discord.File(f'{i[0]}.png'))
+                msg = await self.channel.send(file=discord.File(f'{self.ID}{i[0]}.png'))
                 if i[1] == "A":
                     await msg.add_reaction("🇦")
                 elif i[1] == "B":
@@ -218,12 +219,13 @@ async def help(ctx):
 
 @bot.command()
 async def startmc(ctx, subject_code, year):
+    session_id = ctx.author
     embed=discord.Embed(
         title="CIEQPS",
         description="Starting paper...",
         color=discord.Color.blue())
     await ctx.channel.send(embed=embed)
-    newSesh = Session(ctx, subject_code, year)
+    newSesh = Session(ctx, subject_code, year, session_id)
     await newSesh.get_choices()
 
 @bot.event

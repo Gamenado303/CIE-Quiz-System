@@ -123,7 +123,7 @@ def mc_ans_finder(pdf):
     return answers
 
 
-def mc_questions(pdf):
+def mc_questions(pdf, ID):
     if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
         print("Not enough info")
         return
@@ -170,7 +170,7 @@ def mc_questions(pdf):
             page.cropBox.upperRight = (top_right[0], top_right[1])
             output = PdfFileWriter()
             output.addPage(page)
-            with open(f"{i}.pdf", "ab") as out_f:
+            with open(f"{ID}{i}.pdf", "ab") as out_f:
                 output.write(out_f)
 
     '''
