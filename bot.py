@@ -10,7 +10,7 @@ bot = commands.Bot(command_prefix='$')
 bot.remove_command("help")
 
 class Session():
-    def __init__(self, ctx, subject_code, year, ID):
+    def __init__(self, ctx, subject_code, year, ID, pp):
         self.ctx = ctx
         self.channel = ctx.channel
         self.subject_code = subject_code
@@ -19,8 +19,7 @@ class Session():
         self.season = ""  # "summer", "winter"
         self.paper = ""
         self.time_zone = ""
-        self.pp = ps.PDFPaper(category = "A%20Levels", subject_code = self.subject_code, year = self.year)
-        self.pp.subject = ps.subject_finder(self.pp)
+        self.pp = pp
         self.paper_count = ps.scan_papers(self.pp)
         self.user_answers = ""
         self.question_num = 1
@@ -219,17 +218,41 @@ async def help(ctx):
 
 @bot.command()
 async def startmc(ctx, subject_code, year):
-    session_id = ctx.author
+    avaliable_years = [str(i) for i in range(2010, 2022)]
+    pp = ps.PDFPaper(category = "A%20Levels", subject_code = subject_code, year = year)
+    pp.subject = ps.subject_finder(pp)
+    if year not in avaliable_years and pp.subject == "":
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid subject code and year!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
+    if pp.subject == "":
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid subject code!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
+    if year not in avaliable_years:
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid year!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
     embed=discord.Embed(
         title="CIEQPS",
         description="Starting paper...",
         color=discord.Color.blue())
-    await ctx.channel.send(embed=embed)
-    newSesh = Session(ctx, subject_code, year, session_id)
+    await ctx.channel.send(embed=embed)                          
+    session_id = hash(str(ctx.author)+subject_code+year)
+    newSesh = Session(ctx, subject_code, year, session_id, pp)
     await newSesh.get_choices()
 
 @bot.event
 async def on_ready():
-    print("wa hoo")
+    print("CIEQPS online")
 
 bot.run("")

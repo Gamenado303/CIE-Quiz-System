@@ -22,8 +22,9 @@ class PDFPaper(object):
 def subject_finder(pdf):
     session = requests.Session()
     response = session.get(f"https://papers.gceguide.com/{pdf.category}/", headers={'User-Agw': 'Mozilla/5.0'})
-    webpage = response.text
-    for line in webpage.split('\n'):
+    webpage = response.text.split('\n')[:-15]
+    subject = ""
+    for line in webpage:
         if pdf.subject_code in line:
             subject = line
             index = subject.find(pdf.subject_code)
@@ -35,7 +36,7 @@ def subject_finder(pdf):
             subject = subject[lb+1:]
             subject = subject.replace(" ", "%20")
             return subject
-
+    return subject
 def scan_papers(pdf):
     if not(pdf.category and pdf.subject and pdf.year):
         print("Not enough info")
