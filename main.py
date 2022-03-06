@@ -1,20 +1,61 @@
+import discord
+from discord.utils import get
+from discord.ext import commands
 import paper_scraper as ps
+import multi_choice as mc
+import time
+from pdf2image import convert_from_path, convert_from_bytes
+import os
+import asyncio
+bot = commands.Bot(command_prefix='$')
+bot.remove_command("help")
 
-def scrape_pdf_paper(category, subject_code, years, mark_scheme=False):
-    years = [str(x) for x in years]
-    for year in years:
-        pp = ps.PDFPaper(category = category, subject_code = subject_code, year = year)
-        pp.subject = ps.subject_finder(pp)
-        paper_count = ps.scan_papers(pp)
-        for version in paper_count:
-            pp.season = version[0]
-            pp.paper = version[1]
-            pp.time_zone = version[2]
-            if pp.paper == "1" and pp.season == "w" and pp.time_zone == "3":
-                print(ps.start_mc_paper(pp))
-                
+@bot.command()
+async def help(ctx):
+    embed=discord.Embed(
+        title="CIEQPS Help",
+        description="Made by Gamenado#8487 and NathanHueg#8084",
+        color=discord.Color.blue())
+    embed.add_field(name="startmc", value="Begin setting up a multiple-choice question. Requires the subject code and year", inline=False)
+    await ctx.channel.send(embed=embed)
 
-if __name__ == '__main__':
-    years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021]
-    years = [2020]
-    scrape_pdf_paper(category="A%20Levels", subject_code="9702", years=years, mark_scheme=True)
+@bot.command()
+async def startmc(ctx, subject_code, year):
+    avaliable_years = [str(i) for i in range(2010, 2022)]
+    pp = ps.PDFPaper(category = "A%20Levels", subject_code = subject_code, year = year)
+    pp.subject = ps.subject_finder(pp)
+    if year not in avaliable_years and pp.subject == "":
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid subject code and year!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
+    if pp.subject == "":
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid subject code!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
+    if year not in avaliable_years:
+        embed=discord.Embed(
+        title="CIEQPS",
+        description="Invalid year!",
+        color=discord.Color.blue())
+        await ctx.channel.send(embed=embed)
+        return
+    embed=discord.Embed(
+        title="CIEQPS",
+        description="Starting paper...",
+        color=discord.Color.blue())
+    await ctx.channel.send(embed=embed)                          
+    session_id = hash(str(ctx.author)+subject_code+year)
+    newSesh = mc.MCSession(bot, ctx, subject_code, year, session_id, pp)
+    await newSesh.get_choices()
+
+@bot.event
+async def on_ready():
+    print("CIEQPS online")
+
+bot.run("OTQzMzk1MjUwNDE4OTAxMDMz.YgybSw.5i34VYUnuGpgoziaEVFYcYx9Xls")
