@@ -13,7 +13,7 @@ bot.remove_command("help")
 @bot.command()
 async def help(ctx):
     embed=discord.Embed(
-        title="CIEQPS Help",
+        title="CIEQS Help",
         description="Made by Gamenado#8487 and NathanHueg#8084",
         color=discord.Color.blue())
     embed.add_field(name="startmc", value="Begin setting up a multiple-choice question. Requires the subject code and year", inline=False)
@@ -33,20 +33,20 @@ async def startmc(ctx, subject_code, year):
         return
     if pp.subject == "":
         embed=discord.Embed(
-        title="CIEQPS",
+        title="CIEQS",
         description="Invalid subject code!",
         color=discord.Color.blue())
         await ctx.channel.send(embed=embed)
         return
     if year not in avaliable_years:
         embed=discord.Embed(
-        title="CIEQPS",
+        title="CIEQS",
         description="Invalid year!",
         color=discord.Color.blue())
         await ctx.channel.send(embed=embed)
         return
     embed=discord.Embed(
-        title="CIEQPS",
+        title="CIEQS",
         description="Starting paper...",
         color=discord.Color.blue())
     await ctx.channel.send(embed=embed)                          
@@ -56,6 +56,6 @@ async def startmc(ctx, subject_code, year):
 
 @bot.event
 async def on_ready():
-    print("CIEQPS online")
+    print("CIEQS online")
 
 bot.run("OTQzMzk1MjUwNDE4OTAxMDMz.YgybSw.5i34VYUnuGpgoziaEVFYcYx9Xls")
