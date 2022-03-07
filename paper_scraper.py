@@ -5,9 +5,9 @@ from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 from pdf2image import convert_from_path
 import os
 import tabula
-#import fitz
 from typing import Iterable, Any
 from pdfminer.high_level import extract_pages
+
 
 class PDFPaper(object):
     def __init__(self, category="", subject_code="", year="", season="", time_zone="", paper=""):
@@ -18,6 +18,7 @@ class PDFPaper(object):
         self.season = season  # "summer", "winter"
         self.paper = paper
         self.time_zone = time_zone
+
 
 def subject_finder(pdf):
     session = requests.Session()
@@ -37,6 +38,8 @@ def subject_finder(pdf):
             subject = subject.replace(" ", "%20")
             return subject
     return subject
+
+
 def scan_papers(pdf):
     if not(pdf.category and pdf.subject and pdf.year):
         print("Not enough info")
@@ -66,6 +69,7 @@ def scan_papers(pdf):
 
     paper_count = list(paper_count)
     return paper_count
+
 
 def mc_ans_finder(pdf):
     if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
@@ -191,6 +195,7 @@ def mc_questions(pdf, ID):
     os.remove("test.pdf")
     return question_amount
 
+
 def start_mc_paper(pdf):
     if not(pdf.category and pdf.subject and pdf.year and pdf.season and pdf.time_zone and pdf.paper):
         print("Not enough info")
@@ -208,6 +213,4 @@ def start_mc_paper(pdf):
     for qn in range(1, len(answers)+1):
         if answers[qn] == user_ans[qn]:
             correct += 1
-
-    
     return correct
