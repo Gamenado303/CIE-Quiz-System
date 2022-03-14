@@ -22,19 +22,30 @@ class Session():
         self.paper_count = ps.scan_papers(pp)
         self.seasons = set([i[0] for i in self.paper_count])
         self.cancel = False
-        
+
+    async def cancel_paper(self):
+        embed=discord.Embed(
+                title="CIEQPS MC",
+                description="Paper ended!",
+                color=discord.Color.blue())
+        await self.channel.send(embed=embed)
+    
     async def get_choices(self):
         await self.get_seasons()
         if self.cancel:
+            await self.cancel_paper()
             return
         await self.get_papers()
         if self.cancel:
+            await self.cancel_paper()
             return    
         await self.get_time_zone()
         if self.cancel:
+            await self.cancel_paper()
             return
         await self.display_options()
         if self.cancel:
+            await self.cancel_paper()
             return               
         
     async def get_seasons(self):

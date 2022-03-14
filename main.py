@@ -17,11 +17,11 @@ async def help(ctx):
         title="CIEQPS Help",
         description="Made by Gamenado#8487 and NathanHueg#8084",
         color=discord.Color.blue())
-    embed.add_field(name="startmc", value="Begin setting up a multiple-choice question. Requires the subject code and year", inline=False)
+    embed.add_field(name="start", value="Begin setting up a paper. Requires the subject code and year", inline=False)
     await ctx.channel.send(embed=embed)
 
 @bot.command()
-async def startmc(ctx, subject_code, year):
+async def start(ctx, subject_code, year):
     avaliable_years = [str(i) for i in range(2010, 2022)]
     pp = ps.PDFPaper(category = "A%20Levels", subject_code = subject_code, year = year)
     pp.subject = ps.subject_finder(pp)
